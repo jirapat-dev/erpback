@@ -35,7 +35,6 @@ test/
 ### 1. ติดตั้ง dependencies
 ```bash
 npm install
-npm install helmet  # เพิ่ม security headers
 ```
 
 ### 2. รัน development
@@ -50,42 +49,16 @@ npm run test:concurrent         # Concurrent insert tests
 npm run test:cov                # Coverage report
 ```
 
-### Users
-```
-GET    /api/v1/users              # List (with pagination & filter)
-GET    /api/v1/users/:id          # Get by ID (UUID validated)
-POST   /api/v1/users              # Create user
-POST   /api/v1/users/bulk         # Bulk create (transaction)
-PATCH  /api/v1/users/:id          # Update
-DELETE /api/v1/users/:id          # Soft delete
-```
-
-### LLM
-```
-POST   /api/v1/llm/chat           # Chat with OpenTyphoon
-```
-
-## 🧪 Concurrent Insert Tests
-
-ไฟล์ `test/users-concurrent.spec.ts` จำลองสถานการณ์:
-- **Test 1**: Sequential insert — ตรวจ basic functionality
-- **Test 2**: 50 users concurrent bulk insert — ไม่มี conflict
-- **Test 3**: Duplicate email detection ใน bulk
-- **Test 4**: 4 batches × 5 users ยิงพร้อมกันด้วย `Promise.allSettled`
-- **Test 5**: ConflictException สำหรับ single create ซ้ำ
-- **Test 6**: Performance — 200 users ใน < 500ms (mock)
-
-## 🔌 OpenTyphoon LLM
-
-
-## 🚀 ส่วนที่ทำเสร็จแล้ว
+## ส่วนที่ทำเสร็จแล้ว
 ✔ Part 1: Collision-safe Code Service
 - Create document:       POST   /api/v1/documents
 - Soft delete document:  DELETE /api/v1/documents
+- Unit Test concurrent:  npm run test:concurrent
+```bash
+npm run test:concurrent
+```
 
-✔ Part 2: Auto Code Generation (Core Logic)
-- Generate unique document code
-- Format: {PREFIX}-{YEAR_BE}-{SEQUENCE}
-- Reset sequence every year
-- Guarantee uniqueness under concurrent requests
-- Respect soft delete (deleted data still consumes code)
+✔ Part 2: Query API
+- GET    /api/v1/documents
+- POST   /api/v1/documents
+- ไม่คืนเอกสารทีถูก soft-delete
