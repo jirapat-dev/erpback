@@ -81,20 +81,30 @@ export class UsersRepository implements IUserRepository {
   async create(data: CreateUserData): Promise<IUser> {
     // Check uniqueness first (will also be enforced by DB UNIQUE index)
     const existing = await this.repo.findOne({
-      where: [{ email: data.email }, { username: data.username }],
+      where: [
+        { email: data.email.toLowerCase() },
+        { username: data.username.toLowerCase() },
+      ],
     });
+
     if (existing) {
       throw new ConflictException('email or username already in use');
     }
 
-    const user = this.repo.create(data);
+    const user = this.repo.create({
+      ...data,
+      email: data.email.toLowerCase(),
+      username: data.username.toLowerCase(),
+    });
 
     return this.repo.save(user);
   }
 
   async update(id: string, data: UpdateUserData): Promise<IUser> {
     const user = await this.repo.findOne({ where: { id } });
-    if (!user) throw new NotFoundException(`User ${id} not found`);
+    if (!user) { 
+      throw new NotFoundException(`User ${id} not found`);
+    }
 
     Object.assign(user, data);
 

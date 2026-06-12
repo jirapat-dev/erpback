@@ -22,7 +22,7 @@ async function bootstrap() {
   // ── Global prefix ───────────────────────────────────────────────────────
   app.setGlobalPrefix('api/v1');
 
-  const port = process.env.PORT ?? 3000;
+  const port = process.env.PORT ?? 8080;
   await app.listen(port);
 
   Logger.log(`🚀 Server running on http://localhost:${port}/api/v1`, 'Bootstrap');

@@ -9,10 +9,11 @@ import { DataSource, Repository } from 'typeorm';
 import * as crypto from 'crypto';
 
 import {
-  ICreateUser,
-  IUserFilter,
-  IUserPaginatedResult,
-  IUserPublic,
+  IUser,
+  CreateUserData,
+  UpdateUserData,
+  UserFilter,
+  PaginatedResult,
 } from './interfaces/user.interface';
 
 import { User, UserStatus } from './entities/user.entity';
@@ -30,76 +31,95 @@ export class UsersService {
     private readonly dataSource: DataSource,
   ) {}
 
-  // ────── Hash password (simple SHA-256 + salt) ────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // Password Hash
+  // ─────────────────────────────────────────────────────────────
+
   private hashPassword(password: string): string {
-    const salt = process.env.PASSWORD_SALT ?? 'default-salt-change-me';
+    const salt =
+      process.env.PASSWORD_SALT ??
+      'default-salt-change-me';
+
     return crypto
       .createHmac('sha256', salt)
       .update(password)
       .digest('hex');
   }
 
-  // ────── Strip password from response ─────────────────────────────────────
-  private toPublic(user: User): IUserPublic {
-    const { password, ...rest } = user as User & { password: string };
-    void password;
+  // ─────────────────────────────────────────────────────────────
+  // Find User By Id
+  // ─────────────────────────────────────────────────────────────
 
-    return { ...rest, fullName: user.fullName };
-  }
+  async findById(id: string): Promise<IUser> {
+    const user = await this.userRepo.findOne({
+      where: { id },
+    });
 
-  // ────── Find by ID ────────────────────────────────────────────────────────
-  async findById(id: string): Promise<IUserPublic> {
-    // ใช้ parameterized query — ป้องกัน SQL injection โดย TypeORM
-    const user = await this.userRepo.findOne({ where: { id } });
-    if (!user) { 
-      throw new NotFoundException(`ไม่พบผู้ใช้รหัส ${id}`); 
+    if (!user) {
+      throw new NotFoundException(
+        `ไม่พบผู้ใช้รหัส ${id}`,
+      );
     }
 
-    return this.toPublic(user);
+    return user;
   }
 
-  // ────── Find all with pagination ──────────────────────────────────────────
+  // ─────────────────────────────────────────────────────────────
+  // Find All Users
+  // ─────────────────────────────────────────────────────────────
+
   async findAll(
-    filter: IUserFilter = {},
-    page = 1,
-    limit = 20,
-  ): Promise<IUserPaginatedResult> {
-    const qb = this.userRepo
-      .createQueryBuilder('u')
-      .where('u.deletedAt IS NULL');
+    filter: UserFilter = {},
+  ): Promise<PaginatedResult<IUser>> {
+    const {
+      role,
+      status,
+      search,
+      page = 1,
+      limit = 20,
+    } = filter;
 
-    // Dynamic filters — ทุกค่าถูก bind เป็น parameter ไม่มีการ interpolate string
-    if (filter.role) { 
-      qb.andWhere('u.role = :role', { role: filter.role }); 
+    const skip = (page - 1) * limit;
+
+    const qb = this.userRepo.createQueryBuilder('u');
+
+    if (role) {
+      qb.andWhere('u.role = :role', {
+        role,
+      });
     }
 
-    if (filter.status) {
-      qb.andWhere('u.status = :status', { status: filter.status });
+    if (status) {
+      qb.andWhere('u.status = :status', {
+        status,
+      });
     }
 
-    if (filter.email) { 
-      qb.andWhere('u.email ILIKE :email', { email: `%${filter.email}%` });
+    if (search) {
+      qb.andWhere(
+        `
+        (
+          u.username ILIKE :search
+          OR u.email ILIKE :search
+          OR u.firstName ILIKE :search
+          OR u.lastName ILIKE :search
+        )
+        `,
+        {
+          search: `%${search}%`,
+        },
+      );
     }
 
-    if (filter.username) { 
-      qb.andWhere('u.username ILIKE :username', { username: `%${filter.username}%` });
-    }
+    qb.skip(skip)
+      .take(limit)
+      .orderBy('u.createdAt', 'DESC');
 
-    if (filter.createdAfter) {
-      qb.andWhere('u.createdAt >= :after', { after: filter.createdAfter });
-    }
-
-    if (filter.createdBefore) { 
-      qb.andWhere('u.createdAt <= :before', { before: filter.createdBefore });
-    }
-
-    const offset = (page - 1) * limit;
-    qb.skip(offset).take(limit).orderBy('u.createdAt', 'DESC');
-
-    const [users, total] = await qb.getManyAndCount();
+    const [data, total] =
+      await qb.getManyAndCount();
 
     return {
-      data: users.map((user) => this.toPublic(user)),
+      data,
       total,
       page,
       limit,
@@ -107,77 +127,157 @@ export class UsersService {
     };
   }
 
-  // ────── Create single user ────────────────────────────────────────────────
-  async create(dto: CreateUserDto): Promise<IUserPublic> {
-    // ตรวจสอบ duplicate ก่อน insert
-    const existing = await this.userRepo
-      .createQueryBuilder('u')
-      .where('u.email = :email OR u.username = :username', {
-        email: dto.email.toLowerCase().trim(),
-        username: dto.username.toLowerCase().trim(),
-      })
-      .getOne();
+  // ─────────────────────────────────────────────────────────────
+  // Create User
+  // ─────────────────────────────────────────────────────────────
+
+  async create(
+    dto: CreateUserDto,
+  ): Promise<IUser> {
+    const email = dto.email
+      .toLowerCase()
+      .trim();
+
+    const username = dto.username
+      .toLowerCase()
+      .trim();
+
+    const existing =
+      await this.userRepo.findOne({
+        where: [
+          { email },
+          { username },
+        ],
+      });
 
     if (existing) {
-      if (existing.email === dto.email.toLowerCase().trim()) {
-        throw new ConflictException('Email นี้ถูกใช้งานแล้ว');
+      if (existing.email === email) {
+        throw new ConflictException(
+          'Email นี้ถูกใช้งานแล้ว',
+        );
       }
-      throw new ConflictException('Username นี้ถูกใช้งานแล้ว');
+
+      throw new ConflictException(
+        'Username นี้ถูกใช้งานแล้ว',
+      );
     }
 
     const user = this.userRepo.create({
       ...dto,
-      password: this.hashPassword(dto.password),
-    } as ICreateUser);
+      email,
+      username,
+      password: this.hashPassword(
+        dto.password,
+      ),
+    } as CreateUserData);
 
-    const saved = await this.userRepo.save(user);
-    this.logger.log(`Created user: ${saved.id}`);
+    const saved = await this.userRepo.save(
+      user,
+    );
 
-    return this.toPublic(saved);
+    this.logger.log(
+      `Created user: ${saved.id}`,
+    );
+
+    return saved;
   }
 
-  // ────── Bulk create (transaction) ─────────────────────────────────────────
-  async bulkCreate(dtos: CreateUserDto[]): Promise<IUserPublic[]> {
-    return this.dataSource.transaction(async (manager) => {
-      const repo = manager.getRepository(User);
-      const entities = dtos.map((dto) =>
-        repo.create({
-          ...dto,
-          password: this.hashPassword(dto.password),
-        } as ICreateUser),
-      );
+  // ─────────────────────────────────────────────────────────────
+  // Bulk Insert Users
+  // ─────────────────────────────────────────────────────────────
 
-      // TypeORM batch insert — parameterized, ป้องกัน SQL injection
-      const saved = await repo.save(entities, { chunk: 50 });
+  async bulkInsert(
+    dtos: CreateUserDto[],
+  ): Promise<IUser[]> {
+    return this.dataSource.transaction(
+      async (manager) => {
+        const repo =
+          manager.getRepository(User);
 
-      return saved.map((u) => this.toPublic(u));
+        const entities = dtos.map(
+          (dto) =>
+            repo.create({
+              ...dto,
+              email: dto.email
+                .toLowerCase()
+                .trim(),
+              username: dto.username
+                .toLowerCase()
+                .trim(),
+              password: this.hashPassword(
+                dto.password,
+              ),
+            } as CreateUserData),
+        );
+
+        return repo.save(entities, {
+          chunk: 50,
+        });
+      },
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Update User
+  // ─────────────────────────────────────────────────────────────
+
+  async update(
+    id: string,
+    dto: UpdateUserDto,
+  ): Promise<IUser> {
+    const user = await this.userRepo.findOne({
+      where: { id },
     });
-  }
 
-  // ────── Update ────────────────────────────────────────────────────────────
-  async update(id: string, dto: UpdateUserDto): Promise<IUserPublic> {
-    const user = await this.userRepo.findOne({ where: { id } });
-    if (!user) { 
-      throw new NotFoundException(`ไม่พบผู้ใช้รหัส ${id}`); 
+    if (!user) {
+      throw new NotFoundException(
+        `ไม่พบผู้ใช้รหัส ${id}`,
+      );
     }
 
-    Object.assign(user, dto);
-    const updated = await this.userRepo.save(user);
+    Object.assign(
+      user,
+      dto as UpdateUserData,
+    );
 
-    return this.toPublic(updated);
+    const updated =
+      await this.userRepo.save(user);
+
+    return updated;
   }
 
-  // ────── Soft delete ───────────────────────────────────────────────────────
-  async remove(id: string): Promise<void> {
-    const user = await this.userRepo.findOne({ where: { id } });
-    if (!user) { 
-      throw new NotFoundException(`ไม่พบผู้ใช้รหัส ${id}`); 
+  // ─────────────────────────────────────────────────────────────
+  // Soft Delete
+  // ─────────────────────────────────────────────────────────────
+
+  async remove(
+    id: string,
+  ): Promise<void> {
+    const user = await this.userRepo.findOne({
+      where: { id },
+    });
+
+    if (!user) {
+      throw new NotFoundException(
+        `ไม่พบผู้ใช้รหัส ${id}`,
+      );
     }
 
     user.status = UserStatus.INACTIVE;
 
     await this.userRepo.save(user);
-    await this.userRepo.softDelete(id);
-    this.logger.log(`Soft deleted user: ${id}`);
+
+    const result =
+      await this.userRepo.softDelete(id);
+
+    if (!result.affected) {
+      throw new NotFoundException(
+        `ไม่พบผู้ใช้รหัส ${id}`,
+      );
+    }
+
+    this.logger.log(
+      `Soft deleted user: ${id}`,
+    );
   }
 }

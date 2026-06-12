@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { LlmService } from '../services/llm/llm.service';
-import { LlmController } from '../controllers/llm/llm.controller';
+import { LlmService } from '../llm/llm.service';
+import { LlmController } from '../llm/llm.controller';
 
 @Module({
   providers: [LlmService],

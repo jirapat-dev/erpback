@@ -1,7 +1,6 @@
-import { Module } from '@nestjs/common';
+import { Module, ValidationPipe } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import { DatabaseModule } from './database/database.module';
 import { UsersModule } from './users/users.module';
 import { LlmModule } from './llm/llm.module';
@@ -26,7 +25,7 @@ import { SanitizeGuard } from './common/guards/sanitize.guard';
       provide: APP_PIPE,
       useValue: new ValidationPipe({
         whitelist: true,           // strip fields ที่ไม่ได้ประกาศใน DTO
-        forbidNonWhitelisted: true, // throw error ถ้ามี field แปลกปลอม
+        // forbidNonWhitelisted: true, // throw error ถ้ามี field แปลกปลอม
         transform: true,
         transformOptions: { enableImplicitConversion: true },
       }),

@@ -5,5 +5,5 @@ export default registerAs('llm', () => ({
   baseUrl:
     process.env.OPENTYPHOON_BASE_URL ?? 'https://api.opentyphoon.ai/v1',
   model:
-    process.env.OPENTYPHOON_MODEL ?? 'typhoon-v2-70b-instruct',
+    process.env.OPENTYPHOON_MODEL ?? 'typhoon-v2.1-12b-instruct',
 }));

@@ -1,5 +1,6 @@
 import {
   Body,
+  ClassSerializerInterceptor,
   Controller,
   Delete,
   Get,
@@ -11,19 +12,28 @@ import {
   Post,
   Query,
   UseInterceptors,
-  ClassSerializerInterceptor,
 } from '@nestjs/common';
 
-import { UsersService } from '../../users/users.service';
+import { UsersService } from './users.service';
 
-import { CreateUserDto } from '../../users/dto/create-user.dto';
-import { UpdateUserDto } from '../../users/dto/update-user.dto';
-import { UserRole, UserStatus } from '../../users/entities/user.entity';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+
+import {
+  UserRole,
+  UserStatus,
+} from './entities/user.entity';
 
 @Controller('users')
 @UseInterceptors(ClassSerializerInterceptor)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+  ) {}
+
+  // ─────────────────────────────────────────────────────────────
+  // GET /users
+  // ─────────────────────────────────────────────────────────────
 
   @Get()
   findAll(
@@ -31,44 +41,85 @@ export class UsersController {
     @Query('limit') limit = '20',
     @Query('role') role?: UserRole,
     @Query('status') status?: UserStatus,
-    @Query('email') email?: string,
-    @Query('username') username?: string,
+    @Query('search') search?: string,
   ) {
-    return this.usersService.findAll(
-      { role, status, email, username },
-      parseInt(page, 10),
-      parseInt(limit, 10),
-    );
+    return this.usersService.findAll({
+      role,
+      status,
+      search,
+      page: Number(page),
+      limit: Number(limit),
+    });
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // GET /users/:id
+  // ─────────────────────────────────────────────────────────────
+
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  findOne(
+    @Param('id', ParseUUIDPipe)
+    id: string,
+  ) {
     return this.usersService.findById(id);
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // POST /users
+  // ─────────────────────────────────────────────────────────────
+
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateUserDto) {
+  create(
+    @Body()
+    dto: CreateUserDto,
+  ) {
     return this.usersService.create(dto);
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // POST /users/bulk
+  // ─────────────────────────────────────────────────────────────
+
   @Post('bulk')
   @HttpCode(HttpStatus.CREATED)
-  bulkCreate(@Body() dtos: CreateUserDto[]) {
-    return this.usersService.bulkCreate(dtos);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateUserDto,
+  bulkInsert(
+    @Body()
+    dtos: CreateUserDto[],
   ) {
-    return this.usersService.update(id, dto);
+    return this.usersService.bulkInsert(
+      dtos,
+    );
   }
 
-  @Delete(':id')
+  // ─────────────────────────────────────────────────────────────
+  // PATCH /users/:id
+  // ─────────────────────────────────────────────────────────────
+
+  @Post(':id')
+  update(
+    @Param('id', ParseUUIDPipe)
+    id: string,
+
+    @Body()
+    dto: UpdateUserDto,
+  ) {
+    return this.usersService.update(
+      id,
+      dto,
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // DELETE /users/:id
+  // ─────────────────────────────────────────────────────────────
+
+  @Post(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.usersService.remove(id);
+  async remove(
+    @Param('id', ParseUUIDPipe)
+    id: string,
+  ): Promise<void> {
+    await this.usersService.remove(id);
   }
 }
