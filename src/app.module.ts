@@ -3,6 +3,8 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { DatabaseModule } from './database/database.module';
 import { UsersModule } from './users/users.module';
+import { DocumentsModule } from './documents/documents.module';
+
 import { LlmModule } from './llm/llm.module';
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { SanitizeGuard } from './common/guards/sanitize.guard';
@@ -14,6 +16,7 @@ import { SanitizeGuard } from './common/guards/sanitize.guard';
     DatabaseModule,
     UsersModule,
     LlmModule,
+    DocumentsModule,
   ],
   providers: [
     // Global exception handler

@@ -20,10 +20,10 @@ export default registerAs(
     logging: process.env.NODE_ENV === 'development',
     // Connection pool (prevent connection exhaustion under concurrent load)
     extra: {
-      max: 20,              // max pool connections
+      max: 50,              // max pool connections
       min: 2,               // keep at least 2 alive
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
-    },
+      connectionTimeoutMillis: 10000,    
+  },
   }),
 );

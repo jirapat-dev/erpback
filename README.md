@@ -38,53 +38,17 @@ npm install
 npm install helmet  # เพิ่ม security headers
 ```
 
-### 2. สร้าง .env จาก .env.example
-```bash
-cp .env.example .env
-# แก้ไขค่า DB_HOST, DB_PASSWORD, TYPHOON_API_KEY
-```
-
-### 3. ค่า .env สำหรับ Supabase
-```env
-DB_HOST=db.<project-ref>.supabase.co
-DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=<supabase-db-password>
-DB_NAME=postgres
-DB_SSL=true
-
-TYPHOON_API_KEY=<your-opentyphoon-key>
-TYPHOON_BASE_URL=https://api.opentyphoon.ai/v1
-TYPHOON_MODEL=typhoon-v2-8b-instruct
-```
-
-### 4. รัน development
+### 2. รัน development
 ```bash
 npm run start:dev
 ```
 
-### 5. รัน tests
+### 3. รัน tests
 ```bash
 npm test                        # Unit tests ทั้งหมด
 npm run test:concurrent         # Concurrent insert tests
 npm run test:cov                # Coverage report
 ```
-
-## 🔒 Security
-
-| ชั้น | การป้องกัน |
-|------|-----------|
-| TypeORM parameterized queries | ป้องกัน SQL injection หลัก |
-| `SanitizeGuard` | Pattern matching สำหรับ SQL keywords น่าสงสัย |
-| `ValidationPipe` + `whitelist: true` | ป้องกัน mass assignment |
-| `forbidNonWhitelisted: true` | Reject fields ที่ไม่ได้ประกาศ |
-| `class-validator` | ตรวจ type, length, format ของ input |
-| `Helmet` | Security HTTP headers |
-| `@Exclude()` บน password | ไม่ส่ง password ออก response |
-| Soft delete | ไม่ลบข้อมูลถาวร |
-| GlobalExceptionFilter | ซ่อน stack trace ใน production |
-
-## 📡 API Endpoints
 
 ### Users
 ```
@@ -113,18 +77,15 @@ POST   /api/v1/llm/chat           # Chat with OpenTyphoon
 
 ## 🔌 OpenTyphoon LLM
 
-```typescript
-// ใช้งานใน service อื่น
-@Injectable()
-export class MyService {
-  constructor(private readonly llm: LlmService) {}
 
-  async summarize(text: string) {
-    return this.llm.chat(text, {
-      systemPrompt: 'คุณเป็น AI ที่สรุปข้อมูลเป็นภาษาไทย',
-      temperature: 0.3,
-      maxTokens: 512,
-    });
-  }
-}
-```
+## 🚀 ส่วนที่ทำเสร็จแล้ว
+✔ Part 1: Collision-safe Code Service
+- Create document:       POST   /api/v1/documents
+- Soft delete document:  DELETE /api/v1/documents
+
+✔ Part 2: Auto Code Generation (Core Logic)
+- Generate unique document code
+- Format: {PREFIX}-{YEAR_BE}-{SEQUENCE}
+- Reset sequence every year
+- Guarantee uniqueness under concurrent requests
+- Respect soft delete (deleted data still consumes code)

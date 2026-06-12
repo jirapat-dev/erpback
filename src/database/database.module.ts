@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from '../users/entities/user.entity';
+import { Documents } from '../documents/entities/documents.entity';
+import { DocumentSequences } from '../documents/entities/document-sequences.entity';
 
 @Module({
   imports: [
@@ -15,14 +17,14 @@ import { User } from '../users/entities/user.entity';
         username: config.getOrThrow<string>('DB_USERNAME'),
         password: config.getOrThrow<string>('DB_PASSWORD'),
         database: config.get<string>('DB_NAME', 'postgres'),
-        entities: [User],
+        entities: [User, Documents, DocumentSequences],
         synchronize: config.get('NODE_ENV') !== 'production',
         ssl: config.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
         extra: {
-          max: 20,
+          max: 50,
           min: 2,
           idleTimeoutMillis: 30000,
-          connectionTimeoutMillis: 5000,
+          connectionTimeoutMillis: 10000,
         },
         logging: config.get('NODE_ENV') === 'development' ? ['query', 'error'] : ['error'],
         maxQueryExecutionTime: 5000,

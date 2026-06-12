@@ -10,7 +10,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:concurrent": "jest --testPathPattern=concurrent --runInBand"
+    "test:concurrent": "jest test/documents.concurrent.service.spec.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

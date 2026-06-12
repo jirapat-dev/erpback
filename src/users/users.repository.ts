@@ -60,7 +60,6 @@ export class UsersRepository implements IUserRepository {
     if (search) {
       qb.andWhere(
         '(user.username ILIKE :search OR user.email ILIKE :search OR user.firstName ILIKE :search)',
-        // Escape wildcards so a user can't pass '%' to force a full table scan
         { search: `%${escapeWildcard(search)}%` },
       );
     }
