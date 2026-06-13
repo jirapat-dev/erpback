@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 
@@ -6,9 +6,16 @@ import { Documents } from './entities/documents.entity';
 import { DocumentSequences } from './entities/document-sequences.entity';
 import { DocumentType } from './interfaces/document-type.eum';
 
-
 @Injectable()
 export class DocumentsRepository {
+
+  private readonly logger = new Logger(DocumentsRepository.name);
+
+  /** Postgres unique_violation. */
+  private static readonly PG_UNIQUE_VIOLATION = '23505';
+
+  /** How many times to retry a code collision before giving up. */
+  private static readonly MAX_ISSUE_RETRIES = 5;
 
   constructor(
     @InjectRepository(Documents)
@@ -21,15 +28,40 @@ export class DocumentsRepository {
   ) {}
 
   async issueCode(entityType: DocumentType) {
-
     const year = new Date().getFullYear() + 543;
 
-    return this.dataSource.transaction(async (manager) => {
+    for (
+      let attempt = 1;
+      attempt <= DocumentsRepository.MAX_ISSUE_RETRIES;
+      attempt++
+    ) {
+      try {
+        return await this.issueCodeOnce(entityType, year);
+      } catch (error) {
+        if (
+          this.isUniqueViolation(error) &&
+          attempt < DocumentsRepository.MAX_ISSUE_RETRIES
+        ) {
+          this.logger.warn(
+            `issueCode collision for ${entityType}-${year} (attempt ${attempt}); retrying`,
+          );
+          continue;
+        }
+        throw error;
+      }
+    }
 
+    throw new Error(
+      `issueCode: exhausted ${DocumentsRepository.MAX_ISSUE_RETRIES} retries for ${entityType}-${year}`,
+    );
+  }
+
+  private async issueCodeOnce(entityType: DocumentType, year: number) {
+    return this.dataSource.transaction(async (manager) => {
       const sequenceRepo = manager.getRepository(DocumentSequences);
       const documentRepo = manager.getRepository(Documents);
 
-      // 1. lock sequence row
+      // 1. lock the counter row for this (entityType, year)
       let sequence = await sequenceRepo
         .createQueryBuilder('seq')
         .setLock('pessimistic_write')
@@ -37,31 +69,24 @@ export class DocumentsRepository {
         .andWhere('seq.year = :year', { year })
         .getOne();
 
-
-      // 2. create if not exists (safe under lock)
+      // 2. create if missing
       if (!sequence) {
-        sequence = sequenceRepo.create({
-          entityType,
-          year,
-          lastNumber: 0,
-        });
-
-        sequence = await sequenceRepo.save(sequence);
+        sequence = await sequenceRepo.save(
+          sequenceRepo.create({ entityType, year, lastNumber: 0 }),
+        );
       }
 
-      // 3. increment safely
+      // 3. increment under the lock
       sequence.lastNumber += 1;
       await sequenceRepo.save(sequence);
 
-      // 4. generate code
-      const code = `${this.getPrefix(entityType)}-${year}-${String(sequence.lastNumber).padStart(4, '0')}`;
+      // 4. generate the human-readable code
+      const code = `${this.getPrefix(entityType)}-${year}-${String(
+        sequence.lastNumber,
+      ).padStart(4, '0')}`;
 
-      // 5. save document
-      const doc = documentRepo.create({
-        entityType,
-        code,
-      });
-
+      // 5. persist the document (documents.code UNIQUE is the final guard)
+      const doc = documentRepo.create({ entityType, code });
       await documentRepo.save(doc);
 
       return {
@@ -71,6 +96,14 @@ export class DocumentsRepository {
         createdAt: doc.createdAt,
       };
     });
+  }
+
+  private isUniqueViolation(error: unknown): boolean {
+    const code =
+      (error as { code?: string })?.code ??
+      (error as { driverError?: { code?: string } })?.driverError?.code;
+
+    return code === DocumentsRepository.PG_UNIQUE_VIOLATION;
   }
 
   async softDeleteDocument(id: string) {

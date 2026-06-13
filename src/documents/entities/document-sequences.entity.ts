@@ -1,32 +1,20 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  DeleteDateColumn,
-//   Index,
-  BeforeInsert,
-  BeforeUpdate,
-} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, Unique } from 'typeorm';
 
-@Entity('DOCUMENT_SEQUENCES')
+@Entity('document_sequences')
+@Unique('UQ_DOCUMENT_SEQUENCES_TYPE_YEAR', ['entityType', 'year'])
 export class DocumentSequences {
   @PrimaryGeneratedColumn()
-  id:number;
+  id: number;
 
-
-  @Column()
-  entityType:string;
-
+  @Column({ name: 'entity_type' })
+  entityType: string;
 
   @Column()
-  year:number;
-
+  year: number;
 
   @Column({
-    default:0
+    name: 'last_number',
+    default: 0,
   })
-  lastNumber:number;
-
+  lastNumber: number;
 }

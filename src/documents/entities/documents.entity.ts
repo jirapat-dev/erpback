@@ -3,16 +3,13 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  UpdateDateColumn,
   DeleteDateColumn,
 //   Index,
-  BeforeInsert,
-  BeforeUpdate,
 } from 'typeorm';
 
 import { DocumentType } from '../interfaces/document-type.eum'
 
-@Entity('DOCUMENTS')
+@Entity('documents')
 export class Documents {
   @PrimaryGeneratedColumn('uuid')
   id: string;
