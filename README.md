@@ -48,17 +48,3 @@ npm test                        # Unit tests ทั้งหมด
 npm run test:concurrent         # Concurrent insert tests
 npm run test:cov                # Coverage report
 ```
-
-## ส่วนที่ทำเสร็จแล้ว
-✔ Part 1: Collision-safe Code Service
-- Create document:       POST   /api/v1/documents
-- Soft delete document:  DELETE /api/v1/documents
-- Unit Test concurrent:  npm run test:concurrent
-```bash
-npm run test:concurrent
-```
-
-✔ Part 2: Query API
-- GET    /api/v1/documents
-- POST   /api/v1/documents
-- ไม่คืนเอกสารทีถูก soft-delete
