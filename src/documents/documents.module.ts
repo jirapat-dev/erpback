@@ -8,9 +8,10 @@ import { DocumentsService } from './documents.service';
 import { DocumentsRepository } from './documents.repository';
 
 import { DocumentsController } from './documents.controller';
+import { LlmModule } from '../llm/llm.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Documents, DocumentSequences])],
+  imports: [TypeOrmModule.forFeature([Documents, DocumentSequences]), LlmModule],
   providers: [DocumentsService, DocumentsRepository],
   controllers: [DocumentsController],
   exports: [DocumentsService],

@@ -16,6 +16,7 @@ import {
 import { CreateDocumentDto } from './dto/create-document-dto';
 import { DocumentsService } from './documents.service';
 import { GetDocumentsQueryDto } from './dto/get-document-query.dto';
+import { ClassifyDocumentDto } from './dto/classify-document.dto';
 
 @Controller('documents')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -42,10 +43,22 @@ export class DocumentsController {
     return {
       success:true,
       data:{
+        id:document.id,
         code:document.code,
         entityType:document.entityType,
         createdAt:document.createdAt
       }
+    };
+  }
+
+  @Post('classify')
+  @HttpCode(HttpStatus.OK)
+  async classify(@Body() dto: ClassifyDocumentDto) {
+    const result = await this.documentsService.classify(dto.text);
+
+    return {
+      success: true,
+      data: result,
     };
   }
 

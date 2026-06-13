@@ -10,7 +10,11 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:concurrent": "jest test/documents.concurrent.service.spec.ts"
+    "test:concurrent": "jest test/documents.concurrent.service.spec.ts",
+    "typeorm": "typeorm-ts-node-commonjs -d src/data-source.ts",
+    "migration:run": "npm run typeorm -- migration:run",
+    "migration:revert": "npm run typeorm -- migration:revert",
+    "migration:generate": "typeorm-ts-node-commonjs -d src/data-source.ts migration:generate"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

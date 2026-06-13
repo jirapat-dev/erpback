@@ -37,9 +37,25 @@ export class LlmService {
   private readonly model: string;
 
   constructor(private readonly config: ConfigService) {
-    const baseURL = this.config.get<string>('TYPHOON_BASE_URL', 'https://api.opentyphoon.ai/v1');
-    const apiKey = this.config.getOrThrow<string>('TYPHOON_API_KEY');
-    this.model = this.config.get<string>('TYPHOON_MODEL', 'typhoon-v2-8b-instruct');
+    // Brief asks for OPENAI_*; we keep TYPHOON_* as a fallback so the existing
+    // OpenTyphoon key keeps working. Key is read from env — never hardcoded.
+    const baseURL =
+      this.config.get<string>('OPENAI_BASE_URL') ??
+      this.config.get<string>('TYPHOON_BASE_URL') ??
+      'https://api.opentyphoon.ai/v1';
+    const apiKey =
+      this.config.get<string>('OPENAI_API_KEY') ??
+      this.config.get<string>('TYPHOON_API_KEY');
+    this.model =
+      this.config.get<string>('OPENAI_MODEL') ??
+      this.config.get<string>('TYPHOON_MODEL') ??
+      'typhoon-v2.1-12b-instruct';
+
+    if (!apiKey) {
+      this.logger.warn(
+        'No OPENAI_API_KEY/TYPHOON_API_KEY set — LLM calls will fail and callers must fall back.',
+      );
+    }
 
     this.client = axios.create({
       baseURL,
@@ -98,6 +114,7 @@ export class LlmService {
       this.logger.debug(
         `Tokens used: ${response.data.usage.total_tokens}`,
       );
+      
       return content;
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);

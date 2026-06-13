@@ -18,7 +18,9 @@ import { DocumentSequences } from '../documents/entities/document-sequences.enti
         password: config.getOrThrow<string>('DB_PASSWORD'),
         database: config.get<string>('DB_NAME', 'postgres'),
         entities: [User, Documents, DocumentSequences],
-        synchronize: config.get('NODE_ENV') !== 'production',
+        // Schema is now owned by migrations (see src/data-source.ts), not
+        // auto-sync — otherwise sync would race/conflict with the rename.
+        synchronize: false,
         ssl: config.get('DB_SSL') === 'true' ? { rejectUnauthorized: false } : false,
         extra: {
           max: 50,
