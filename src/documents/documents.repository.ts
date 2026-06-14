@@ -132,8 +132,6 @@ export class DocumentsRepository {
   }) {
 
     const qb = this.documentRepo.createQueryBuilder('doc');
-
-    // ❌ exclude soft delete
     qb.where('doc.deletedAt IS NULL');
 
     // filter entityType

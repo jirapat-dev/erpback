@@ -2,33 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios, { AxiosInstance } from 'axios';
 
-export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-export interface TyphoonResponse {
-  id: string;
-  object: string;
-  created: number;
-  model: string;
-  choices: {
-    index: number;
-    message: ChatMessage;
-    finish_reason: string;
-  }[];
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-}
-
-export interface LLMChatOptions {
-  temperature?: number;
-  maxTokens?: number;
-  systemPrompt?: string;
-}
+import {
+  ChatMessage,
+  LLMChatOptions,
+  TyphoonResponse,
+} from './interfaces/llm.interface';
 
 @Injectable()
 export class LlmService {
@@ -37,8 +15,6 @@ export class LlmService {
   private readonly model: string;
 
   constructor(private readonly config: ConfigService) {
-    // Brief asks for OPENAI_*; we keep TYPHOON_* as a fallback so the existing
-    // OpenTyphoon key keeps working. Key is read from env — never hardcoded.
     const baseURL =
       this.config.get<string>('OPENAI_BASE_URL') ??
       this.config.get<string>('TYPHOON_BASE_URL') ??

@@ -1,5 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
-import { LlmService, LLMChatOptions } from '../llm/llm.service';
+import { LlmService } from '../llm/llm.service';
+import { LLMChatOptions } from '../llm/interfaces/llm.interface';
 import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 class ChatDto {
